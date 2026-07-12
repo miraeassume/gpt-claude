@@ -1,0 +1,10 @@
+# Python 캐시
+__pycache__/
+*.pyc
+*.pyo
+
+# Claude 설정
+.claude/
+
+# 대용량 시나리오 결과 (코드 실행으로 재생성)
+원화_확률론적할인율_*.xlsx
