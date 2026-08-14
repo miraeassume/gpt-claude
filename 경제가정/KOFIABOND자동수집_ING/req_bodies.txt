@@ -1,0 +1,222 @@
+=== 요청 1 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-COM</pfmAppName>
+    <pfmSvcName>BISComMenuSO</pfmSvcName>
+    <pfmFnName>selectMenuBIS</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISComMenuDTO>
+<workGb>KOR</workGb>
+</BISComMenuDTO></message>
+
+
+=== 요청 2 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-KOFIABOND</pfmAppName>
+    <pfmSvcName>BISMainSO</pfmSvcName>
+    <pfmFnName>selectIdxList</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISMainIdxDTO>
+<standardDt>20260813</standardDt>
+</BISMainIdxDTO></message>
+
+
+=== 요청 3 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-KOFIABOND</pfmAppName>
+    <pfmSvcName>BISMainSO</pfmSvcName>
+    <pfmFnName>selectBoardList</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISMainBoardDTO>
+<boardId>1</boardId>
+</BISMainBoardDTO></message>
+
+
+=== 요청 4 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-KOFIABOND</pfmAppName>
+    <pfmSvcName>BISMainSO</pfmSvcName>
+    <pfmFnName>selectPopupZoneList</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISPopupZoneDTO>
+<workGb>BIS</workGb>
+</BISPopupZoneDTO></message>
+
+
+=== 요청 5 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-KOFIABOND</pfmAppName>
+    <pfmSvcName>BISMainSO</pfmSvcName>
+    <pfmFnName>selectRptCompLogoList</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISReportCompLogoDTO>
+<standardDt>20260813</standardDt>
+<workGb>BIS</workGb>
+</BISReportCompLogoDTO></message>
+
+
+=== 요청 6 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-KOFIABOND</pfmAppName>
+    <pfmSvcName>BISMainSO</pfmSvcName>
+    <pfmFnName>selectAnnItmList</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISMainComDTO>
+<standardDt>20260813</standardDt>
+</BISMainComDTO></message>
+
+
+=== 요청 7 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-KOFIABOND</pfmAppName>
+    <pfmSvcName>BISMainSO</pfmSvcName>
+    <pfmFnName>selectKrxFurList</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISMainComDTO>
+<standardDt>20260813</standardDt>
+</BISMainComDTO></message>
+
+
+=== 요청 8 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-COM</pfmAppName>
+    <pfmSvcName>BISCOMVistCntSO</pfmSvcName>
+    <pfmFnName>logVisitCnt</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISComVistCntDTO>								<divisionId>MBIS00000000000000</divisionId>		</BISComVistCntDTO>							</message>
+
+
+=== 요청 9 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-COM</pfmAppName>
+    <pfmSvcName>BISComMenuSO</pfmSvcName>
+    <pfmFnName>selectMenuBIS</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISComMenuDTO>
+<workGb>KOR</workGb>
+</BISComMenuDTO></message>
+
+
+=== 요청 10 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-KOFIABOND</pfmAppName>
+    <pfmSvcName>BISMainSO</pfmSvcName>
+    <pfmFnName>selectIdxList</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISMainIdxDTO>
+<standardDt>20260813</standardDt>
+</BISMainIdxDTO></message>
+
+
+=== 요청 11 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-KOFIABOND</pfmAppName>
+    <pfmSvcName>BISMainSO</pfmSvcName>
+    <pfmFnName>selectBoardList</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISMainBoardDTO>
+<boardId>1</boardId>
+</BISMainBoardDTO></message>
+
+
+=== 요청 12 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-KOFIABOND</pfmAppName>
+    <pfmSvcName>BISMainSO</pfmSvcName>
+    <pfmFnName>selectPopupZoneList</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISPopupZoneDTO>
+<workGb>BIS</workGb>
+</BISPopupZoneDTO></message>
+
+
+=== 요청 13 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-KOFIABOND</pfmAppName>
+    <pfmSvcName>BISMainSO</pfmSvcName>
+    <pfmFnName>selectRptCompLogoList</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISReportCompLogoDTO>
+<standardDt>20260813</standardDt>
+<workGb>BIS</workGb>
+</BISReportCompLogoDTO></message>
+
+
+=== 요청 14 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-KOFIABOND</pfmAppName>
+    <pfmSvcName>BISMainSO</pfmSvcName>
+    <pfmFnName>selectAnnItmList</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISMainComDTO>
+<standardDt>20260813</standardDt>
+</BISMainComDTO></message>
+
+
+=== 요청 15 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-KOFIABOND</pfmAppName>
+    <pfmSvcName>BISMainSO</pfmSvcName>
+    <pfmFnName>selectKrxFurList</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISMainComDTO>
+<standardDt>20260813</standardDt>
+</BISMainComDTO></message>
+
+
+=== 요청 16 ===
+<?xml version="1.0" encoding="utf-8"?>
+<message>
+  <proframeHeader>
+    <pfmAppName>BIS-COM</pfmAppName>
+    <pfmSvcName>BISCOMVistCntSO</pfmSvcName>
+    <pfmFnName>logVisitCnt</pfmFnName>
+  </proframeHeader>
+  <systemHeader></systemHeader>
+<BISComVistCntDTO>								<divisionId>MBIS00000000000000</divisionId>		</BISComVistCntDTO>							</message>
+
+

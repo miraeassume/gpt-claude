@@ -9,54 +9,82 @@ IFRS17 및 K-ICS 규제 기준에 따른 **원화 할인율 곡선(Smith-Wilson)
 ## 실행 방법
 
 ```bash
-# 의존 패키지 설치
 pip install numpy pandas scipy matplotlib openpyxl
-
-# 스크립트 실행 (출력: .xlsx + .png)
 python ifrs17_krw_curve.py
 ```
 
-별도 빌드, 테스트 프레임워크, 린트 설정 없음.
+## 알고리즘 (FSS 간소화 xlsm VBA 완전 정합 버전 v4)
 
-## 주요 파라미터 (스크립트 상단 하드코딩)
-
-| 변수 | 의미 | 현재값 |
-|------|------|--------|
-| `LLP` | Last Liquid Point (최종유동점) | 23년 |
-| `CP`  | Convergence Point (수렴점) | 60년 |
-| `LTFR` | Long-Term Forward Rate (장기선도금리) | 4.30% |
-| `LP`  | Liquidity Premium (유동성 프리미엄) | 0 bp |
-| `BOND_YIELDS_PCT` | 만기별 국고채 YTM (%) | 더미 데이터 — 실사용 시 교체 필요 |
-
-## 데이터 파이프라인
+### 산출 흐름
 
 ```
-BOND_YIELDS_PCT (국고채 YTM dict)
-  → interp_yields()   선형 보간 (1~23년 공백 채움)
-  → bootstrap()       YTM → 할인계수 (par yield 부트스트랩)
-  → df_to_spot()      할인계수 → 현물금리 (연속복리)
-  → add_lp()          유동성 프리미엄 가산 (≤ LLP 구간)
-  → calibrate_alpha() alpha 자동 탐색 (CP에서 LTFR ±1bp 수렴)
-  → sw_fit()          Smith-Wilson 계수(ζ) 행렬 계산
-  → [1~100년 루프]
-      sw_df()         할인계수
-      sw_fwd()        순간선도금리 (수치 미분)
-  → DataFrame → Excel(.xlsx) + 차트(.png)
+BOND_YIELDS_PCT (국고채 YTM)
+  → [Step 1] SmithWilsonYTM (Module2)
+        UFR = 50Y YTM, alpha=0.1
+        쿠폰행렬 직접 피팅: ZETA = (CWC')^-1 * (m - Cu)
+        출력: F 컬럼 — 연속 현물금리 @ 관찰 만기 + LLP=23Y
+  → [Step 2] LP 가산
+        G = LN(EXP(F) + LP)  [≤ LLP 구간]
+  → [Step 3] Alpha 자동 산출 (VBA SmithWilson_ALPHA_UB_LB)
+        UFR_SW2 = 0.0 (Excel U7=0)
+        이분탐색: CP=60Y에서 순간선도금리 → 0%
+        결과: alpha ≈ 0.17453479 (2026년 7월)
+  → [Step 4] SmithWilson (Module1)
+        UFR = UFR_SW2 = 0.0, alpha = [Step 3 결과]
+        ZETA = W^-1 * (P - M), 월 단위 외삽
+        출력: 연속 현물금리 @ P=0~1200월
+  → [Step 5] Cont2Discrete (Module3)
+        U = EXP(cont_spot) - 1
+  → [Step 6] Forward (V 컬럼)
+        V(P=m) = (1+U(P=m+1))^(m+1) / (1+U(P=m))^m - 1
 ```
 
-## 핵심 함수 역할
+### 핵심 파라미터
 
-- `W(t, u, alpha)` — Wilson 커널 함수 (알고리즘의 수학적 핵심)
-- `sw_fit()` — ζ 계수 행렬 풀기 (선형대수)
-- `calibrate_alpha()` — `scipy.optimize.brentq`로 alpha 자동 탐색
-- `run()` — 전체 파이프라인 오케스트레이션 + 파일 출력
+| 변수 | 역할 | 값 |
+|------|------|----|
+| `LLP` | 최종관찰만기 | 23년 |
+| `CP`  | 최초수렴시점 | 60년 |
+| `LTFR` | 장기선도금리 (참고용) | 4.30% |
+| `UFR_SW2` | **Step2/Alpha 교정 UFR** | **0.00%** (Excel U7=0) |
+| `COUPON_FREQ` | 이자지급횟수 | 연 2회 |
+| `LP_PCT` | 유동성프리미엄 | 매월 FSS 고시값 |
+| `BOND_YIELDS_PCT` | 국고채 YTM | 매월 KOFIA 데이터 |
 
-## KOFIA 데이터 수집
+### VBA 정합 핵심 사항
 
-실데이터 입력 방법은 저장소 내 `KOFIA_국고채권_금리_수집 (1).md` 참조.
-API 응답의 `val1`~`val15` 필드가 각 만기(1M~30Y)에 해당한다.
+1. **`_ytm_price`**: T가 dt(=1/freq)의 배수가 **아닌** 경우 (0.25Y, 0.75Y 등),
+   DF = `1/(1+YTM*T)` (단순이자) 사용 — VBA의 `CInt(T/dt)` 판별과 동일
 
-## 참고 자료 (저장소 내)
+2. **UFR_SW2 = 0.0**: SmithWilson Step2 및 Alpha 교정 모두 UFR=0 사용
+   - Excel 간소화 파일의 U7 셀 = 0 직접 대응
+   - Alpha는 CP=60Y에서 순간선도금리 → 0%로 수렴
 
-- FSS 공시 할인율 곡선 Excel (2026년 1~5월)
-- IFRS17 경제가정·K-ICS 할인율 기준 PDF 문서
+3. **F/G/U/V 컬럼**: Excel 간소화 파일 컬럼명과 동일
+   - F: SW1 Spot(Cont) at 관찰 만기
+   - G: Spot(Cont)+LP at 관찰 만기
+   - U: 최종 Spot(Discrete) at 월별
+   - V: 최종 Forward(Discrete) at 월별
+
+### 출력 파일
+
+| 파일 | 설명 |
+|------|------|
+| `원화_LP_금리기간구조_{YYYYMMDD}.xlsx` | 4개 시트: U_V_월별, F_G_관찰점, 파라미터, 비교_연단위 |
+| `원화_LP_금리기간구조_{YYYYMMDD}_차트.png` | Spot/Forward 차트 |
+
+## 참고 파일
+
+| 파일 | 용도 |
+|------|------|
+| `FSS_IFRS17 및 K-ICS 금리기간구조(원화)_'26.1_간소화.xlsm` | **정답 기준** (VBA Module1/2/3 포함) |
+| `FSS_IFRS17 및 K-ICS 금리기간구조(원화)_'26.1.xlsm` | 원본 FSS 파일 (Jan 2026) |
+| `채권시가평가기준수익률_0731.xls` | KOFIA 국고채 YTM 원본 |
+| `KOFIA_국고채권_금리_수집 (1).md` | API 데이터 수집 방법 |
+
+## 데이터 교체 방법 (매월)
+
+1. `BOND_YIELDS_PCT`: KOFIA 최신 국고채 YTM으로 교체
+2. `LP_PCT`: FSS 홈페이지 고시 유동성프리미엄으로 교체
+3. `BASE_DATE`: 기준일 교체
+4. `UFR_SW2`: Excel 간소화 파일 U7 셀 값 확인 (통상 0.0 유지)

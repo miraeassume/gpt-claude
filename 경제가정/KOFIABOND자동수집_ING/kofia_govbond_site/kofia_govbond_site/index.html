@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KOFIA 국고채권 금리 조회</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">KOFIA Bond Center</p>
+      <h1>국고채권 시가평가 가중평균수익률 조회</h1>
+      <p class="subtitle">금융투자협회 채권정보센터 XML API 명세 기반 조회 화면</p>
+    </div>
+    <a class="ghost" href="https://www.kofiabond.or.kr/" target="_blank" rel="noreferrer">KOFIA 열기</a>
+  </header>
+
+  <main class="layout">
+    <section class="card input-card">
+      <div class="card-head">
+        <h2>조회 조건</h2>
+        <span class="badge">POST XML</span>
+      </div>
+      <div class="form-grid">
+        <label>
+          기준일
+          <input id="standardDate" type="date" value="2026-06-15" />
+        </label>
+        <label>
+          채권종류 필터
+          <input value="국고채권" disabled />
+        </label>
+        <label>
+          applyGbCd
+          <input value="C00" disabled />
+        </label>
+      </div>
+      <div class="actions">
+        <button id="queryBtn">샘플 조회</button>
+        <button id="xmlBtn" class="secondary">요청 XML 보기</button>
+        <button id="csvBtn" class="secondary">CSV 다운로드</button>
+      </div>
+      <p class="notice">브라우저 단독 호출은 CORS/사내망 정책에 막힐 수 있어 현재 파일은 화면 프로토타입입니다. 실제 조회는 Python/Flask 백엔드를 붙이는 구조가 안전합니다.</p>
+    </section>
+
+    <section class="card summary-card">
+      <h2>핵심 API 정보</h2>
+      <dl class="spec-list">
+        <div><dt>URL</dt><dd>https://www.kofiabond.or.kr/XMLSERVICES/</dd></div>
+        <div><dt>Method</dt><dd>POST</dd></div>
+        <div><dt>Content-Type</dt><dd>application/xml; charset=utf-8</dd></div>
+        <div><dt>Service</dt><dd>BISSrtPrcEstMtrxWhtAvgSrchSO.selectList</dd></div>
+      </dl>
+    </section>
+
+    <section class="card full">
+      <div class="card-head">
+        <h2>조회 결과</h2>
+        <span id="status" class="status">샘플 데이터</span>
+      </div>
+      <div class="table-wrap">
+        <table id="rateTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card full">
+      <div class="card-head">
+        <h2>금리 커브</h2>
+        <span class="badge">국고채권</span>
+      </div>
+      <div id="curve" class="curve"></div>
+    </section>
+
+    <section class="card full hidden" id="xmlPanel">
+      <div class="card-head">
+        <h2>요청 XML</h2>
+        <button id="copyXmlBtn" class="secondary small">복사</button>
+      </div>
+      <pre><code id="xmlCode"></code></pre>
+    </section>
+
+    <section class="card full">
+      <h2>만기 매핑</h2>
+      <div class="mapping-grid" id="mappingGrid"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Source: KOFIA 국고채권 금리 수집 가이드 · 기준 문서 작성일 2026-06-15</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
