@@ -2,53 +2,23 @@
 ============================================================
   IFRS17 / K-ICS  원화 조정무위험 금리기간구조 산출
   (Smith-Wilson 방법, 2026년 감독원 고시 기준)
+  ★ 자동수집판 : BOND_YIELDS_PCT 를 KOFIA에서 인터넷으로 자동 취득
 ============================================================
 
-[산출 흐름 - FSS 간소화 xlsm VBA 완전 정합 버전]
-  국고채 YTM 입력 (FSS 기준 16개 tenor: 0.25Y ~ 50Y)
-    → [Step 1] SmithWilsonYTM (쿠폰행렬 직접 피팅, 1단계 UFR=50Y YTM)
-      → 연속 현물금리 @ 0.25~50Y + LLP=23Y (F 컬럼)
-    → [Step 2] LP 가산: G = LN(EXP(F) + LP)  (G 컬럼, 전 구간)
-    → [Step 3] Alpha 자동산출 (이분탐색, UFR_SW2=0, CP=60Y 수렴)
-               ※ Excel U7=0 → SmithWilson_ALPHA_UB_LB UFR=0 사용
-    → [Step 4] SmithWilson (2단계, UFR=0, LP 가산 Spot 기반)
-      → 연속 현물금리 @ 0~1200월 (1/12Y 간격)
-    → [Step 5] Cont2Discrete: EXP(cont_spot) - 1  (U 컬럼)
-    → [Step 6] Forward(Discrete): (1+U(m+1))^(m+1)/(1+U(m))^m-1  (V 컬럼)
+이 파일은 `ifrs17_krw_curve.py` 를 기반으로,
+국고채 YTM(BOND_YIELDS_PCT)을 손으로 입력하는 대신
+KOFIA 채권시가평가수익률 API(kofia_bond_srtprc.py)에서
+BASE_DATE 기준으로 자동으로 내려받도록 수정한 버전입니다.
 
-[2026년 파라미터]
-  LLP      (최종관찰만기)     : 23년
-  CP       (최초수렴시점)     : 60년
-  LTFR     (장기선도금리)     : 4.30% — 참고용만 (SW Step2에서 UFR=0 사용)
-  UFR_SW2  (Step2/Alpha UFR) : 0.00% — Excel U7=0 직접 대응
-  Alpha                      : 자동산출 (CP 순간선도→0% 이분탐색)
-  이자지급횟수               : 연 2회 (반기)
-  1단계 SW UFR              : 50Y YTM (이산율, VBA 내부 ln 변환)
-
-[VBA 정합 핵심 사항]
-  - YTMPrice: T가 dt의 배수가 아닌 경우(0.25Y, 0.75Y) DF=1/(1+YTM*T) 단순이자 사용
-  - SmithWilson Step2/Alpha 교정: UFR=0 (Excel 간소화 파일 U7=0)
-  - Forward: (1+U(m+1))^(m+1)/(1+U(m))^m-1 형태
-
-[출력 컬럼]
-  F: SW1 Spot(Cont)         — 관찰 만기별 연속 현물금리
-  G: Spot(Cont)+LP          — F에 LP 가산한 연속 현물금리
-  U: Spot(Discrete)         — 최종 이산 현물금리 (월 단위)
-  V: Forward(Discrete)      — 최종 이산 선도금리 (월 단위, 선도형)
-
-[변경 이력]
-  v4: UFR_SW2=0 (Excel 간소화 파일 U7=0) 확인 반영
-    - _ytm_price: VBA 단순이자 수정 (0.25Y, 0.75Y)
-    - Step2 SmithWilson + Alpha 교정: UFR=0 사용
-    - 출력: F, G, U, V 컬럼 명시
-  v3: FSS xlsm VBA Module1/2 완전 정합
-    - 2단계 SW 프로세스 구현
-    - LP 공식: LN(EXP(spot)+LP)
-    - Alpha: 0.1 고정 → 이분탐색 자동산출
-    - Forward: 월간격 연환산 이산 선도금리
+[KOFIA 만기 ↔ 곡선 tenor 매핑]
+  3M→0.25, 6M→0.50, 9M→0.75, 1Y→1.00, 1.5Y→1.50, 2Y→2.00,
+  2.5Y→2.50, 3Y→3.00, 4Y→4.00, 5Y→5.00, 7Y→7.00, 10Y→10.00,
+  15Y→15.00, 20Y→20.00, 30Y→30.00, 50Y→50.00   (16개 완전 대응)
 
 [의존 패키지]
-  pip install numpy pandas scipy matplotlib openpyxl
+  pip install numpy pandas scipy matplotlib openpyxl requests
+
+[원본 알고리즘 설명은 ifrs17_krw_curve.py 상단 docstring 참조]
 """
 
 import numpy as np
@@ -57,22 +27,60 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import os
+import sys
 import warnings
 warnings.filterwarnings("ignore")
+
+# ── KOFIA 자동수집 모듈 import ───────────────────────────────
+#   ../KOFIABOND자동수집_ING/kofia_bond_srtprc.py 를 경로에 추가
+_KOFIA_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                 "..", "KOFIABOND자동수집_ING")
+)
+if _KOFIA_DIR not in sys.path:
+    sys.path.insert(0, _KOFIA_DIR)
+
+from kofia_bond_srtprc import get_srtprc_rate, ORG_AVG_NEW  # noqa: E402
+
 
 # ============================================================
 # ★ 사용자 입력 구역  (이 블록만 수정하세요)
 # ============================================================
 
 # [1] 기준일
-BASE_DATE = "2026-07-31"
+BASE_DATE = "2026-06-30"
 
-# [2] 국고채 YTM  (KOFIA 채권시가평가기준수익률, 단위: %)
-#     출처: 채권시가평가기준수익률_0731.xls — 국채/국고채권
-#     tenor: 0.25(3M), 0.50(6M), 0.75(9M), 1, 1.5, 2, 2.5, 3,
-#            4, 5, 7, 10, 15, 20, 30, 50
+# [2] 국고채 YTM  ← KOFIA API에서 자동 취득 (수동 입력 불필요)
+#     아래 KOFIA_TO_TENOR 매핑으로 API 응답을 tenor(년) 딕셔너리로 변환합니다.
+#     - 채권 종류 : 국고채권
+#     - 기관     : 평가사 평균('23.1.9~, A20000)
 #     ※ 50Y YTM은 1단계 SW의 UFR로도 사용 (FSS xlsm E23 셀 역할)
-BOND_YIELDS_PCT = {
+BOND_TYPE   = "국고채권"
+REPORT_COMP = ORG_AVG_NEW      # 평가사 평균('23.1.9~)
+
+# KOFIA 응답 만기명(str) → 곡선 tenor(년, float) 매핑
+KOFIA_TO_TENOR = {
+    "3M":   0.25,   # 3개월
+    "6M":   0.50,   # 6개월
+    "9M":   0.75,   # 9개월
+    "1Y":   1.00,   # 1년
+    "1.5Y": 1.50,   # 1년6개월
+    "2Y":   2.00,   # 2년
+    "2.5Y": 2.50,   # 2년6개월
+    "3Y":   3.00,   # 3년
+    "4Y":   4.00,   # 4년
+    "5Y":   5.00,   # 5년
+    "7Y":   7.00,   # 7년
+    "10Y": 10.00,   # 10년
+    "15Y": 15.00,   # 15년
+    "20Y": 20.00,   # 20년
+    "30Y": 30.00,   # 30년
+    "50Y": 50.00,   # 50년  ← 1단계 SW UFR로도 사용
+}
+
+# [2-fallback] API 실패 시 사용할 수동 백업값 (원본 ifrs17_krw_curve.py 값)
+#     인터넷/휴일/서버 오류로 자동수집이 안 될 때만 사용됩니다.
+BOND_YIELDS_PCT_FALLBACK = {
     0.25:  2.831 ,   # 3개월
     0.50:  3.093 ,   # 6개월
     0.75:  3.316 ,   # 9개월
@@ -110,6 +118,81 @@ MAX_TENOR = 100
 
 # [7] 결과 파일 저장 경로
 OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+# ============================================================
+# 국고채 YTM 자동 취득 (KOFIA)
+# ============================================================
+
+def fetch_bond_yields_pct(base_date=BASE_DATE,
+                          bond_type=BOND_TYPE,
+                          report_comp=REPORT_COMP,
+                          fallback=None):
+    """
+    KOFIA 채권시가평가수익률 API에서 국고채 YTM을 자동 취득하여
+    {tenor(년): YTM(%)} 딕셔너리(BOND_YIELDS_PCT)로 반환.
+
+    Parameters
+    ----------
+    base_date   : 기준일 'YYYY-MM-DD' (내부에서 'YYYYMMDD'로 변환)
+    bond_type   : 채권 종류명 (기본 '국고채권')
+    report_comp : 기관 코드 (기본 평가사 평균 A20000)
+    fallback    : 취득 실패 시 사용할 백업 dict (None이면 예외 발생)
+
+    Returns
+    -------
+    dict  {0.25: 2.831, 0.50: 3.093, ...}
+    """
+    date_yyyymmdd = base_date.replace("-", "")
+    print(f"  [KOFIA] {date_yyyymmdd} 국고채 YTM 자동 취득 중...")
+
+    try:
+        df = get_srtprc_rate(date_yyyymmdd, bond_type, report_comp)
+    except Exception as e:
+        print(f"  [KOFIA] API 오류: {e}")
+        df = pd.DataFrame()
+
+    if df is None or df.empty:
+        if fallback is not None:
+            print("  [KOFIA] 취득 실패 → 백업값(BOND_YIELDS_PCT_FALLBACK) 사용")
+            return dict(fallback)
+        raise RuntimeError(
+            f"KOFIA에서 {date_yyyymmdd} 국고채 YTM을 가져오지 못했습니다. "
+            f"(휴일/미영업일/네트워크 문제) — fallback을 지정하거나 날짜를 확인하세요."
+        )
+
+    row = df.iloc[0]
+    yields = {}
+    missing = []
+    for kofia_mat, tenor in KOFIA_TO_TENOR.items():
+        val = row.get(kofia_mat)
+        if val is None or pd.isna(val):
+            missing.append(kofia_mat)
+            continue
+        yields[tenor] = float(val)
+
+    if missing:
+        print(f"  [KOFIA] 경고: 결측 만기 {missing}")
+
+    # 필수 만기(50Y = 1단계 UFR) 검증 및 결측 보완
+    if not yields or 50.00 not in yields:
+        if fallback is not None:
+            print("  [KOFIA] 필수 만기 결측 → 백업값 사용")
+            return dict(fallback)
+        raise RuntimeError("KOFIA 응답에 50Y(1단계 UFR용) 값이 없습니다.")
+
+    # 결측 만기가 있으면 fallback으로 개별 보완
+    if fallback is not None:
+        for tenor, v in fallback.items():
+            yields.setdefault(tenor, v)
+
+    print(f"  [KOFIA] 취득 완료 (기관: {row.get('기관', '-')}, "
+          f"{len(yields)}개 만기)")
+    return dict(sorted(yields.items()))
+
+
+# 모듈 로드 시 자동 취득 (실패하면 백업값)
+BOND_YIELDS_PCT = fetch_bond_yields_pct(fallback=BOND_YIELDS_PCT_FALLBACK)
 
 
 # ============================================================
@@ -314,7 +397,7 @@ def calibrate_alpha(ufr_disc, obs_tenors, cont_spots, cp, tol=1e-4):
 
 def run():
     print("=" * 72)
-    print("  IFRS17 / K-ICS  원화 조정무위험 금리기간구조 (LP 가산)")
+    print("  IFRS17 / K-ICS  원화 조정무위험 금리기간구조 (LP 가산) [자동수집판]")
     print(f"  기준일: {BASE_DATE}  LLP={LLP}Y  CP={CP}Y  "
           f"UFR_SW2={UFR_SW2*100:.2f}%  LP={LP_PCT}%")
     print("=" * 72)
@@ -429,7 +512,7 @@ def run():
 
     # ── Excel 저장 ────────────────────────────────────────────
     date_str   = BASE_DATE.replace("-", "")
-    excel_path = os.path.join(OUTPUT_DIR, f"원화_LP_금리기간구조_{date_str}.xlsx")
+    excel_path = os.path.join(OUTPUT_DIR, f"원화_LP_금리기간구조_{date_str}_auto.xlsx")
 
     with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
         # 메인 시트: U/V 컬럼 (Excel 간소화 파일 U/V 컬럼 대응)
@@ -449,6 +532,7 @@ def run():
         # 파라미터 시트
         params = pd.DataFrame([
             ["기준일",        BASE_DATE],
+            ["YTM 출처",      f"KOFIA API 자동취득 ({BOND_TYPE}, {REPORT_COMP})"],
             ["LLP (년)",      LLP],
             ["CP  (년)",      CP],
             ["UFR_SW2 (%)",   UFR_SW2 * 100],
@@ -518,7 +602,7 @@ def run():
     ax2.set_xlabel("만기 (년)")
     plt.tight_layout()
 
-    chart_path = os.path.join(OUTPUT_DIR, f"원화_LP_금리기간구조_{date_str}_차트.png")
+    chart_path = os.path.join(OUTPUT_DIR, f"원화_LP_금리기간구조_{date_str}_auto_차트.png")
     plt.savefig(chart_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"  [OK] 차트 저장: {chart_path}")

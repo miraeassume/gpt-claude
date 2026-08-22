@@ -197,7 +197,7 @@ def save_to_excel(df, filename='사망률데이터.xlsx'):
         return False
 
     try:
-        filepath = f"C:\\Users\\isu0627\\Desktop\\claude\\{filename}"
+        filepath = f"C:\\Users\\MALIFE\\Desktop\\work\\gpt-claude\\국가통계포털\\{filename}"
 
         with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
             df.to_excel(writer, sheet_name='사망률', index=False)
